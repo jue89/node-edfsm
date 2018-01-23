@@ -24,8 +24,13 @@ FSMInstance.prototype.goto = function (stateName) {
 	// Promise waits for next state
 	let next;
 	const leave = new Promise((resolve) => { next = resolve; });
+	let toHandle;
+	next.timeout = (msecs, nextState) => {
+		toHandle = setTimeout(() => next(nextState), msecs);
+	};
 	this.states[stateName](this.ctx, i, o, next);
 	leave.then((nextState) => {
+		if (toHandle) clearTimeout(toHandle);
 		iHandler.forEach((h) => this.input.removeListener(h[0], h[1]));
 		this.goto(nextState);
 	});

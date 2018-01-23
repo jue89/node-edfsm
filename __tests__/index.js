@@ -1,3 +1,5 @@
+jest.useFakeTimers();
+
 jest.mock('events');
 const EventEmitter = require('events');
 
@@ -84,4 +86,16 @@ test('remove event listeners when leaving state', (done) => {
 		} catch (e) { done(e); }
 	});
 	fsm.run();
+});
+
+test('head over to next state after timeout', (done) => {
+	const fsm = FSM({
+		firstState: 'test1'
+	}).state('test1', (ctx, i, o, next) => {
+		next.timeout(10000, 'test2');
+	}).state('test2', () => {
+		done();
+	});
+	fsm.run();
+	jest.advanceTimersByTime(10000);
 });
