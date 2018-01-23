@@ -48,13 +48,14 @@ FSMInstance.prototype.goto = function (stateName) {
 	leave.then((nextState) => {
 		if (toHandle) clearTimeout(toHandle);
 		iHandler.forEach((h) => this.input.removeListener(h[0], h[1]));
-		if (nextState === null) this.leave();
+		if (nextState === null) return this.leave(nextState, stateName);
+		if (nextState instanceof Error) return this.leave(nextState, stateName);
 		else this.goto(nextState);
 	});
 };
 
-FSMInstance.prototype.leave = function () {
-	this.finalHandler();
+FSMInstance.prototype.leave = function (err, lastState) {
+	this.finalHandler(this.ctx, err, lastState);
 	this.msg(this.log.debug, 'Removed instance', {
 		message_id: '7be6d26c828240a0bb82fc84e5d6a662'
 	});

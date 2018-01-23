@@ -117,6 +117,49 @@ test('run final handler if null is passed into next', (done) => {
 	fsm.run();
 });
 
+test('hand over ctx to final handler', (done) => {
+	const CTX = {};
+	const fsm = FSM({
+		firstState: 'test'
+	}).state('test', (ctx, i, o, next) => {
+		next(null);
+	}).final((ctx) => {
+		try {
+			expect(ctx).toBe(CTX);
+			done();
+		} catch (e) { done(e); }
+	});
+	fsm.run(CTX);
+});
+
+test('hand over last state name to final handler', (done) => {
+	const fsm = FSM({
+		firstState: 'test'
+	}).state('test', (ctx, i, o, next) => {
+		next(null);
+	}).final((ctx, err, lastState) => {
+		try {
+			expect(lastState).toEqual('test');
+			done();
+		} catch (e) { done(e); }
+	});
+	fsm.run();
+});
+
+test('run final handler if instance of Error is passed into next', (done) => {
+	const fsm = FSM({
+		firstState: 'test'
+	}).state('test', (ctx, i, o, next) => {
+		next(new Error('testErr'));
+	}).final((ctx, err) => {
+		try {
+			expect(err.message).toEqual('testErr');
+			done();
+		} catch (e) { done(e); }
+	});
+	fsm.run();
+});
+
 test('expose next handler', (done) => {
 	const fsm = FSM({
 		firstState: 'test'
