@@ -1,0 +1,41 @@
+{
+  "name": "edfsm",
+  "version": "0.0.0",
+  "description": "Event-driven Finite State Machine",
+  "main": "index.js",
+  "scripts": {
+    "test": "happiness && jest",
+    "watch": "jest --watchAll"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jue89/node-edfsm.git"
+  },
+  "keywords": [
+    "fsm",
+    "eventdriven"
+  ],
+  "author": "Jue <me@jue.yt>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jue89/node-edfsm/issues"
+  },
+  "homepage": "https://github.com/jue89/node-edfsm#readme",
+  "devDependencies": {
+    "happiness": "^10.0.2",
+    "jest": "^22.1.4"
+  },
+  "happiness": {
+    "globals": [
+      "jest",
+      "describe",
+      "test",
+      "expect",
+      "beforeEach"
+    ]
+  },
+  "jest": {
+    "automock": false,
+    "clearMocks": true
+  }
+}
