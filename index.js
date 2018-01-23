@@ -2,6 +2,7 @@ function FSMInstance (fsm, ctx) {
 	this.input = fsm.input;
 	this.output = fsm.output;
 	this.states = fsm.states;
+	this.finalHandler = fsm.finalHandler;
 	this.log = fsm.log;
 	this.ctx = ctx;
 	this.goto(fsm.firstState);
@@ -22,18 +23,22 @@ FSMInstance.prototype.goto = function (stateName) {
 	};
 
 	// Promise waits for next state
-	let next;
-	const leave = new Promise((resolve) => { next = resolve; });
+	const leave = new Promise((resolve) => { this.next = resolve; });
 	let toHandle;
-	next.timeout = (msecs, nextState) => {
-		toHandle = setTimeout(() => next(nextState), msecs);
+	this.next.timeout = (msecs, nextState) => {
+		toHandle = setTimeout(() => this.next(nextState), msecs);
 	};
-	this.states[stateName](this.ctx, i, o, next);
+	this.states[stateName](this.ctx, i, o, this.next);
 	leave.then((nextState) => {
 		if (toHandle) clearTimeout(toHandle);
 		iHandler.forEach((h) => this.input.removeListener(h[0], h[1]));
-		this.goto(nextState);
+		if (nextState === null) this.leave();
+		else this.goto(nextState);
 	});
+};
+
+FSMInstance.prototype.leave = function () {
+	this.finalHandler();
 };
 
 function FSM (opts) {
@@ -43,11 +48,17 @@ function FSM (opts) {
 	this.log = {
 		warn: opts.log && opts.log.warn ? opts.log.warn : () => {}
 	};
+	this.finalHandler = () => {};
 	this.states = {};
 }
 
 FSM.prototype.state = function (name, handler) {
 	this.states[name] = handler;
+	return this;
+};
+
+FSM.prototype.final = function (handler) {
+	this.finalHandler = handler;
 	return this;
 };
 

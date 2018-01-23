@@ -99,3 +99,25 @@ test('head over to next state after timeout', (done) => {
 	fsm.run();
 	jest.advanceTimersByTime(10000);
 });
+
+test('run final handler if null is passed into next', (done) => {
+	const fsm = FSM({
+		firstState: 'test'
+	}).state('test', (ctx, i, o, next) => {
+		next(null);
+	}).final(() => {
+		done();
+	});
+	fsm.run();
+});
+
+test('expose next handler', (done) => {
+	const fsm = FSM({
+		firstState: 'test'
+	}).state('test', (ctx, i, o, next) => {
+		// NOP
+	}).final(() => {
+		done();
+	});
+	fsm.run().next(null);
+});
