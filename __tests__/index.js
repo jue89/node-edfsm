@@ -160,6 +160,26 @@ test('run final handler if instance of Error is passed into next', (done) => {
 	fsm.run();
 });
 
+test('error log Errors from final handler', (done) => {
+	const error = jest.fn();
+	const fsm = FSM({
+		fsmName: 'testFSM',
+		firstState: 'test',
+		log: { error }
+	}).state('test', (ctx, i, o, next) => {
+		next(new Error('testErr'));
+	}).final((ctx, err) => {
+		return err;
+	});
+	fsm.run();
+	setImmediate(() => {
+		try {
+			expect(error.mock.calls[0][0]).toEqual('testFSM: testErr');
+			done();
+		} catch (e) { done(e); }
+	});
+});
+
 test('expose next handler', (done) => {
 	const fsm = FSM({
 		firstState: 'test'

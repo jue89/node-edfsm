@@ -55,7 +55,13 @@ FSMInstance.prototype.goto = function (stateName) {
 };
 
 FSMInstance.prototype.leave = function (err, lastState) {
-	this.finalHandler(this.ctx, err, lastState);
+	const ret = this.finalHandler(this.ctx, err, lastState);
+	if (ret instanceof Error) {
+		this.msg(this.log.error, ret.message, {
+			message_id: '42df5fdea6fe4bf29332e2d6b0fbd9d9',
+			stack: ret.stack
+		});
+	}
 	this.msg(this.log.debug, 'Removed instance', {
 		message_id: '7be6d26c828240a0bb82fc84e5d6a662'
 	});
@@ -78,7 +84,8 @@ function FSM (opts) {
 	this.fsmName = opts.fsmName;
 	this.log = {
 		debug: opts.log && opts.log.debug ? opts.log.debug : undefined,
-		warn: opts.log && opts.log.warn ? opts.log.warn : undefined
+		warn: opts.log && opts.log.warn ? opts.log.warn : undefined,
+		error: opts.log && opts.log.error ? opts.log.error : undefined
 	};
 	this.finalHandler = () => {};
 	this.states = {};
