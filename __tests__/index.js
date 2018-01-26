@@ -182,6 +182,25 @@ test('return the result of final handler', (done) => {
 	});
 });
 
+test('call onEnd handler even if no final handler has been defined', (done) => {
+	const CTX = {};
+	const fsm = FSM({
+		firstState: 'test'
+	}).state('test', (ctx, i, o, next) => {
+		next(null);
+	});
+	const onEnd = jest.fn();
+	fsm.run(CTX, onEnd);
+	setImmediate(() => {
+		try {
+			expect(onEnd.mock.calls.length).toEqual(1);
+			done();
+		} catch (e) {
+			done(e);
+		}
+	});
+});
+
 test('error log Errors from final handler', (done) => {
 	const error = jest.fn();
 	const fsm = FSM({
