@@ -1,6 +1,6 @@
 let instanceCnt = 0;
 
-function FSMInstance (fsm, ctx) {
+function FSMInstance (fsm, ctx, onEnd) {
 	this.id = instanceCnt++;
 	this.input = fsm.input;
 	this.output = fsm.output;
@@ -9,6 +9,7 @@ function FSMInstance (fsm, ctx) {
 	this.fsmName = fsm.fsmName;
 	this.log = fsm.log;
 	this.ctx = ctx;
+	this.onEnd = onEnd;
 	this.msg(this.log.debug, 'Created new instance', {
 		message_id: 'fdd14aefc01c4ca8a34bde4cc8f3ede4'
 	});
@@ -65,6 +66,7 @@ FSMInstance.prototype.leave = function (err, lastState) {
 	this.msg(this.log.debug, 'Removed instance', {
 		message_id: '7be6d26c828240a0bb82fc84e5d6a662'
 	});
+	if (typeof this.onEnd === 'function') this.onEnd(ret);
 };
 
 FSMInstance.prototype.msg = function (handler, msg, info) {
@@ -101,8 +103,8 @@ FSM.prototype.final = function (handler) {
 	return this;
 };
 
-FSM.prototype.run = function (ctx) {
-	return new FSMInstance(this, ctx);
+FSM.prototype.run = function (ctx, onEnd) {
+	return new FSMInstance(this, ctx, onEnd);
 };
 
 module.exports = (opts) => new FSM(opts);
