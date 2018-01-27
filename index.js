@@ -37,6 +37,12 @@ FSMInstance.prototype.goto = function (stateName, err, lastState) {
 		}
 	};
 
+	// Make sure given event is defined
+	if (!this.states[stateName]) {
+		err = new Error(`No state named ${stateName} is defined`);
+		stateName = FINAL;
+	}
+
 	// Promise waits for next state
 	const leave = new Promise((resolve) => { this.next = resolve; });
 	let toHandle;

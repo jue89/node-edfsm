@@ -283,3 +283,25 @@ test('debug log fsm destruction', (done) => {
 		} catch (e) { done(e); }
 	});
 });
+
+test('complain about non-existing states', (done) => {
+	const error = jest.fn();
+	const fsm = FSM({
+		fsmName: 'testFSM',
+		firstState: 'nope',
+		log: { error }
+	});
+	fsm.run({}, (err) => {
+		try {
+			expect(err.message).toEqual('No state named nope is defined');
+			expect(error.mock.calls[0][0]).toEqual('testFSM: No state named nope is defined');
+			expect(error.mock.calls[0][1]).toMatchObject({
+				message_id: '42df5fdea6fe4bf29332e2d6b0fbd9d9',
+				fsm_name: 'testFSM'
+			});
+			done();
+		} catch (e) {
+			done(e);
+		}
+	});
+});
