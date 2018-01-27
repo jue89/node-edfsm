@@ -1,5 +1,7 @@
 let instanceCnt = 0;
 
+const FINAL = '$final';
+
 function FSMInstance (fsm, ctx, onEnd) {
 	this.id = instanceCnt++;
 	this.input = fsm.input;
@@ -16,7 +18,7 @@ function FSMInstance (fsm, ctx, onEnd) {
 	this.goto(fsm.firstState);
 }
 
-FSMInstance.prototype.goto = function (stateName) {
+FSMInstance.prototype.goto = function (stateName, err, lastState) {
 	// Expose input bus
 	const iHandler = [];
 	const i = (name, handler) => {
@@ -45,18 +47,31 @@ FSMInstance.prototype.goto = function (stateName) {
 		message_id: '4d1314823a494567ba0c24dd74a8285a',
 		state: stateName
 	});
-	this.states[stateName](this.ctx, i, o, this.next);
-	leave.then((nextState) => {
+	this.states[stateName](this.ctx, i, o, this.next, err, lastState);
+	leave.then((ret) => {
+		// Clean up state related stuffe
 		if (toHandle) clearTimeout(toHandle);
 		iHandler.forEach((h) => this.input.removeListener(h[0], h[1]));
-		if (nextState === null) return this.leave(nextState, stateName);
-		if (nextState instanceof Error) return this.leave(nextState, stateName);
-		else this.goto(nextState);
+
+		// If we were in end state, we want to call onEnd handler
+		if (stateName === FINAL) return this.leave(ret);
+
+		// Otherwise goto the next state
+		let err;
+		let nextState;
+		if (ret === null) {
+			nextState = FINAL;
+		} else if (ret instanceof Error) {
+			err = ret;
+			nextState = FINAL;
+		} else {
+			nextState = ret;
+		}
+		this.goto(nextState, err, stateName);
 	});
 };
 
-FSMInstance.prototype.leave = function (err, lastState) {
-	const ret = this.finalHandler(this.ctx, err, lastState);
+FSMInstance.prototype.leave = function (ret) {
 	if (ret instanceof Error) {
 		this.msg(this.log.error, ret.message, {
 			message_id: '42df5fdea6fe4bf29332e2d6b0fbd9d9',
@@ -89,8 +104,9 @@ function FSM (opts) {
 		warn: opts.log && opts.log.warn ? opts.log.warn : undefined,
 		error: opts.log && opts.log.error ? opts.log.error : undefined
 	};
-	this.finalHandler = () => {};
 	this.states = {};
+	// By default bypass errors
+	this.states[FINAL] = (ctx, i, o, end, err) => end(err);
 }
 
 FSM.prototype.state = function (name, handler) {
@@ -99,7 +115,7 @@ FSM.prototype.state = function (name, handler) {
 };
 
 FSM.prototype.final = function (handler) {
-	this.finalHandler = handler;
+	this.states[FINAL] = handler;
 	return this;
 };
 

@@ -137,7 +137,7 @@ test('hand over last state name to final handler', (done) => {
 		firstState: 'test'
 	}).state('test', (ctx, i, o, next) => {
 		next(null);
-	}).final((ctx, err, lastState) => {
+	}).final((ctx, i, o, end, err, lastState) => {
 		try {
 			expect(lastState).toEqual('test');
 			done();
@@ -151,7 +151,7 @@ test('run final handler if instance of Error is passed into next', (done) => {
 		firstState: 'test'
 	}).state('test', (ctx, i, o, next) => {
 		next(new Error('testErr'));
-	}).final((ctx, err) => {
+	}).final((ctx, i, o, end, err) => {
 		try {
 			expect(err.message).toEqual('testErr');
 			done();
@@ -167,8 +167,8 @@ test('return the result of final handler', (done) => {
 		firstState: 'test'
 	}).state('test', (ctx, i, o, next) => {
 		next(null);
-	}).final(() => {
-		return RESULT;
+	}).final((ctx, i, o, end) => {
+		end(RESULT);
 	});
 	const onEnd = jest.fn();
 	fsm.run(CTX, onEnd);
@@ -187,13 +187,13 @@ test('call onEnd handler even if no final handler has been defined', (done) => {
 	const fsm = FSM({
 		firstState: 'test'
 	}).state('test', (ctx, i, o, next) => {
-		next(null);
+		next(new Error('errTest'));
 	});
 	const onEnd = jest.fn();
 	fsm.run(CTX, onEnd);
 	setImmediate(() => {
 		try {
-			expect(onEnd.mock.calls.length).toEqual(1);
+			expect(onEnd.mock.calls[0][0].message).toEqual('errTest');
 			done();
 		} catch (e) {
 			done(e);
@@ -209,8 +209,8 @@ test('error log Errors from final handler', (done) => {
 		log: { error }
 	}).state('test', (ctx, i, o, next) => {
 		next(new Error('testErr'));
-	}).final((ctx, err) => {
-		return err;
+	}).final((ctx, i, o, end, err) => {
+		end(err);
 	});
 	fsm.run();
 	setImmediate(() => {
@@ -270,12 +270,12 @@ test('debug log fsm destruction', (done) => {
 		log: { debug }
 	}).state('test', (ctx, i, o, next) => {
 		next(null);
-	}).final(() => {});
+	});
 	fsm.run();
 	setImmediate(() => {
 		try {
-			expect(debug.mock.calls[2][0]).toEqual(`testFSM: Removed instance`);
-			expect(debug.mock.calls[2][1]).toMatchObject({
+			expect(debug.mock.calls[3][0]).toEqual(`testFSM: Removed instance`);
+			expect(debug.mock.calls[3][1]).toMatchObject({
 				message_id: '7be6d26c828240a0bb82fc84e5d6a662',
 				fsm_name: 'testFSM'
 			});
