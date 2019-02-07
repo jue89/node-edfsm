@@ -23,8 +23,29 @@ test('expose on method of input bus', () => {
 		i(EVENT, HANDLER);
 	});
 	fsm.run();
-	expect(e.on.mock.calls[0][0]).toEqual(EVENT);
+	expect(e.on.mock.calls[0][0]).toBe(EVENT);
 	expect(e.on.mock.calls[0][1]).toBe(HANDLER);
+});
+
+test('expose on method of input busses', () => {
+	const EVENT_A = 'a';
+	const HANDLER_A = () => {};
+	const EVENT_B = 'b';
+	const HANDLER_B = () => {};
+	const a = EventEmitter();
+	const b = EventEmitter();
+	const fsm = FSM({
+		firstState: 'test',
+		inputs: {a, b}
+	}).state('test', (ctx, i) => {
+		i.a(EVENT_A, HANDLER_A);
+		i.b(EVENT_B, HANDLER_B);
+	});
+	fsm.run();
+	expect(a.on.mock.calls[0][0]).toBe(EVENT_A);
+	expect(a.on.mock.calls[0][1]).toBe(HANDLER_A);
+	expect(b.on.mock.calls[0][0]).toBe(EVENT_B);
+	expect(b.on.mock.calls[0][1]).toBe(HANDLER_B);
 });
 
 test('expose emit method of output bus', () => {
@@ -42,6 +63,27 @@ test('expose emit method of output bus', () => {
 	expect(e.emit.mock.calls[0][1]).toBe(OBJ);
 });
 
+test('expose emit method of output busses', () => {
+	const EVENT_A = 'a';
+	const OBJ_A = {};
+	const EVENT_B = 'b';
+	const OBJ_B = {};
+	const a = EventEmitter();
+	const b = EventEmitter();
+	const fsm = FSM({
+		firstState: 'test',
+		outputs: {a, b}
+	}).state('test', (ctx, i, o) => {
+		o.a(EVENT_A, OBJ_A);
+		o.b(EVENT_B, OBJ_B);
+	});
+	fsm.run();
+	expect(a.emit.mock.calls[0][0]).toEqual(EVENT_A);
+	expect(a.emit.mock.calls[0][1]).toBe(OBJ_A);
+	expect(b.emit.mock.calls[0][0]).toEqual(EVENT_B);
+	expect(b.emit.mock.calls[0][1]).toBe(OBJ_B);
+});
+
 test('warn about not consumed events', () => {
 	const e = EventEmitter();
 	e.emit.mockReturnValueOnce(false);
@@ -55,7 +97,7 @@ test('warn about not consumed events', () => {
 		o('testEvent');
 	});
 	fsm.run();
-	expect(warn.mock.calls[0][0]).toEqual(`testFSM: Event testEvent had no listeners`);
+	expect(warn.mock.calls[0][0]).toEqual(`testFSM: Event testEvent on bus main had no listeners`);
 	expect(warn.mock.calls[0][1]).toMatchObject({
 		message_id: 'c84984c1816e4bf7b552dd7e638e9fa9',
 		fsm_name: 'testFSM',
