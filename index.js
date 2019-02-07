@@ -76,6 +76,7 @@ FSMInstance.prototype.goto = function (stateName, err, lastState) {
 		this.goto(nextState, err, stateName);
 	};
 	this.next.timeout = (msecs, nextState) => {
+		if (toHandle) clearTimeout(toHandle);
 		toHandle = setTimeout(() => this.next(nextState), msecs);
 	};
 

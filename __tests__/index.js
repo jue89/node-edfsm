@@ -148,6 +148,22 @@ test('head over to next state after timeout', (done) => {
 	jest.advanceTimersByTime(10000);
 });
 
+test('retrigger timeout', (done) => {
+	const fsm = FSM({
+		firstState: 'test1'
+	}).state('test1', (ctx, i, o, next) => {
+		next.timeout(10000, 'test2');
+		next.timeout(20000, 'test3');
+	}).state('test2', () => {
+		done(new Error('Wrong state'));
+	}).state('test3', () => {
+		done();
+	});
+	fsm.run();
+	jest.advanceTimersByTime(10000);
+	jest.advanceTimersByTime(10000);
+});
+
 test('run final handler if null is passed into next', (done) => {
 	const fsm = FSM({
 		firstState: 'test'
