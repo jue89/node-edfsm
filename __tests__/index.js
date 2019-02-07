@@ -172,14 +172,12 @@ test('return the result of final handler', (done) => {
 	});
 	const onEnd = jest.fn();
 	fsm.run(CTX, onEnd);
-	setImmediate(() => {
-		try {
-			expect(onEnd.mock.calls[0][0]).toBe(RESULT);
-			done();
-		} catch (e) {
-			done(e);
-		}
-	});
+	try {
+		expect(onEnd.mock.calls[0][0]).toBe(RESULT);
+		done();
+	} catch (e) {
+		done(e);
+	}
 });
 
 test('call onEnd handler even if no final handler has been defined', (done) => {
@@ -191,14 +189,12 @@ test('call onEnd handler even if no final handler has been defined', (done) => {
 	});
 	const onEnd = jest.fn();
 	fsm.run(CTX, onEnd);
-	setImmediate(() => {
-		try {
-			expect(onEnd.mock.calls[0][0].message).toEqual('errTest');
-			done();
-		} catch (e) {
-			done(e);
-		}
-	});
+	try {
+		expect(onEnd.mock.calls[0][0].message).toEqual('errTest');
+		done();
+	} catch (e) {
+		done(e);
+	}
 });
 
 test('error log Errors from final handler', (done) => {
@@ -213,12 +209,10 @@ test('error log Errors from final handler', (done) => {
 		end(err);
 	});
 	fsm.run();
-	setImmediate(() => {
-		try {
-			expect(error.mock.calls[0][0]).toEqual('testFSM: testErr');
-			done();
-		} catch (e) { done(e); }
-	});
+	try {
+		expect(error.mock.calls[0][0]).toEqual('testFSM: testErr');
+		done();
+	} catch (e) { done(e); }
 });
 
 test('expose next handler', (done) => {
@@ -272,16 +266,14 @@ test('debug log fsm destruction', (done) => {
 		next(null);
 	});
 	fsm.run();
-	setImmediate(() => {
-		try {
-			expect(debug.mock.calls[3][0]).toEqual(`testFSM: Removed instance`);
-			expect(debug.mock.calls[3][1]).toMatchObject({
-				message_id: '7be6d26c828240a0bb82fc84e5d6a662',
-				fsm_name: 'testFSM'
-			});
-			done();
-		} catch (e) { done(e); }
-	});
+	try {
+		expect(debug.mock.calls[3][0]).toEqual(`testFSM: Removed instance`);
+		expect(debug.mock.calls[3][1]).toMatchObject({
+			message_id: '7be6d26c828240a0bb82fc84e5d6a662',
+			fsm_name: 'testFSM'
+		});
+		done();
+	} catch (e) { done(e); }
 });
 
 test('complain about non-existing states', (done) => {

@@ -43,18 +43,9 @@ FSMInstance.prototype.goto = function (stateName, err, lastState) {
 		stateName = FINAL;
 	}
 
-	// Promise waits for next state
-	const leave = new Promise((resolve) => { this.next = resolve; });
+	// Setup state switch function
 	let toHandle;
-	this.next.timeout = (msecs, nextState) => {
-		toHandle = setTimeout(() => this.next(nextState), msecs);
-	};
-	this.msg(this.log.debug, `Enter state ${stateName}`, {
-		message_id: '4d1314823a494567ba0c24dd74a8285a',
-		state: stateName
-	});
-	this.states[stateName](this.ctx, i, o, this.next, err, lastState);
-	leave.then((ret) => {
+	this.next = (ret) => {
 		// Clean up state related stuffe
 		if (toHandle) clearTimeout(toHandle);
 		iHandler.forEach((h) => this.input.removeListener(h[0], h[1]));
@@ -74,7 +65,17 @@ FSMInstance.prototype.goto = function (stateName, err, lastState) {
 			nextState = ret;
 		}
 		this.goto(nextState, err, stateName);
+	};
+	this.next.timeout = (msecs, nextState) => {
+		toHandle = setTimeout(() => this.next(nextState), msecs);
+	};
+
+	// Call state
+	this.msg(this.log.debug, `Enter state ${stateName}`, {
+		message_id: '4d1314823a494567ba0c24dd74a8285a',
+		state: stateName
 	});
+	this.states[stateName](this.ctx, i, o, this.next, err, lastState);
 };
 
 FSMInstance.prototype.leave = function (ret) {
