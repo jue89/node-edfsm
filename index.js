@@ -70,12 +70,16 @@ FSMInstance.prototype.goto = function (stateName, err, lastState) {
 		toHandle = setTimeout(() => this.next(nextState), msecs);
 	};
 
-	// Call state
-	this.msg(this.log.debug, `Enter state ${stateName}`, {
-		message_id: '4d1314823a494567ba0c24dd74a8285a',
-		state: stateName
-	});
-	this.states[stateName](this.ctx, i, o, this.next, err, lastState);
+	try {
+		// Call state
+		this.msg(this.log.debug, `Enter state ${stateName}`, {
+			message_id: '4d1314823a494567ba0c24dd74a8285a',
+			state: stateName
+		});
+		this.states[stateName](this.ctx, i, o, this.next, err, lastState);
+	} catch (err) {
+		this.next(err);
+	}
 };
 
 FSMInstance.prototype.leave = function (ret) {

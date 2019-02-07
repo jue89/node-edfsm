@@ -160,6 +160,20 @@ test('run final handler if instance of Error is passed into next', (done) => {
 	fsm.run();
 });
 
+test('run final handler if errors are thrown', (done) => {
+	const fsm = FSM({
+		firstState: 'test'
+	}).state('test', (ctx, i, o, next) => {
+		throw new Error('testErr');
+	}).final((ctx, i, o, end, err) => {
+		try {
+			expect(err.message).toEqual('testErr');
+			done();
+		} catch (e) { done(e); }
+	});
+	fsm.run();
+});
+
 test('return the result of final handler', (done) => {
 	const CTX = {};
 	const RESULT = {};
