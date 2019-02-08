@@ -140,6 +140,7 @@ function FSM (opts) {
 }
 
 FSM.prototype.state = function (name, handler) {
+	if (this.firstState === undefined) this.firstState = name;
 	this.states[name] = handler;
 	return this;
 };

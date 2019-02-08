@@ -12,6 +12,11 @@ test('call first state', (done) => {
 	fsm.run();
 });
 
+test('set firstState implcitly to the first defined state', (done) => {
+	const fsm = FSM({}).state('test', () => done());
+	fsm.run();
+});
+
 test('expose on method of input bus', () => {
 	const EVENT = 'e';
 	const HANDLER = () => {};
