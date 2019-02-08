@@ -116,6 +116,20 @@ test('head over to next state', (done) => {
 	fsm.run();
 });
 
+test('suppress further calls of next callback', (done) => {
+	const fsm = FSM({
+		firstState: 'test1'
+	}).state('test1', (ctx, i, o, next) => {
+		next('test2');
+		next('test3');
+	}).state('test2', () => {
+		done();
+	}).state('test3', () => {
+		done(new Error('wrong state'));
+	});
+	fsm.run();
+});
+
 test('remove event listeners when leaving state', (done) => {
 	const EVENT = 'test';
 	const HANDLER = () => {};

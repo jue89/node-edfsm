@@ -55,6 +55,9 @@ FSMInstance.prototype.goto = function (stateName, err, lastState) {
 	// Setup state switch function
 	let toHandle;
 	this.next = (ret) => {
+		// Make sure we are still in the current state
+		if (stateName !== this.currentState) return;
+
 		// Clean up state related stuffe
 		if (toHandle) clearTimeout(toHandle);
 		iHandler.forEach((h) => h[0].removeListener(h[1], h[2]));
@@ -76,16 +79,20 @@ FSMInstance.prototype.goto = function (stateName, err, lastState) {
 		this.goto(nextState, err, stateName);
 	};
 	this.next.timeout = (msecs, nextState) => {
+		if (stateName !== this.currentState) return;
 		if (toHandle) clearTimeout(toHandle);
 		toHandle = setTimeout(() => this.next(nextState), msecs);
 	};
 
+	// Store current state
+	this.currentState = stateName;
+
+	// Call state
+	this.msg(this.log.debug, `Enter state ${stateName}`, {
+		message_id: '4d1314823a494567ba0c24dd74a8285a',
+		state: stateName
+	});
 	try {
-		// Call state
-		this.msg(this.log.debug, `Enter state ${stateName}`, {
-			message_id: '4d1314823a494567ba0c24dd74a8285a',
-			state: stateName
-		});
 		this.states[stateName](this.ctx, i, o, this.next, err, lastState);
 	} catch (err) {
 		this.next(err);
