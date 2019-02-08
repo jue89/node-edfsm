@@ -4,8 +4,8 @@ const FINAL = '$final';
 
 function FSMInstance (fsm, ctx, onEnd) {
 	this.id = instanceCnt++;
-	this.input = fsm.input;
-	this.output = fsm.output;
+	this.inputs = fsm.inputs;
+	this.outputs = fsm.outputs;
 	this.states = fsm.states;
 	this.finalHandler = fsm.finalHandler;
 	this.fsmName = fsm.fsmName;
@@ -21,21 +21,30 @@ function FSMInstance (fsm, ctx, onEnd) {
 FSMInstance.prototype.goto = function (stateName, err, lastState) {
 	// Expose input bus
 	const iHandler = [];
-	const i = (name, handler) => {
-		iHandler.push([name, handler]);
-		this.input.on(name, handler);
+	const iHandlerGen = (key) => (name, handler) => {
+		iHandler.push([this.inputs[key], name, handler]);
+		this.inputs[key].on(name, handler);
 	};
+	const i = iHandlerGen('main');
+	Object.keys(this.inputs).forEach((key) => {
+		i[key] = iHandlerGen(key);
+	});
 
 	// Expose output bus
-	const o = (name, arg) => {
-		const consumed = this.output.emit(name, arg);
+	const oHandlerGen = (key) => (name, arg) => {
+		const consumed = this.outputs[key].emit(name, arg);
 		if (!consumed) {
-			this.msg(this.log.warn, `Event ${name} had no listeners`, {
+			this.msg(this.log.warn, `Event ${name} on bus ${key} had no listeners`, {
 				event: name,
+				bus: key,
 				message_id: 'c84984c1816e4bf7b552dd7e638e9fa9'
 			});
 		}
 	};
+	const o = oHandlerGen('main');
+	Object.keys(this.outputs).forEach((key) => {
+		o[key] = oHandlerGen(key);
+	});
 
 	// Make sure given event is defined
 	if (!this.states[stateName]) {
@@ -43,21 +52,15 @@ FSMInstance.prototype.goto = function (stateName, err, lastState) {
 		stateName = FINAL;
 	}
 
-	// Promise waits for next state
-	const leave = new Promise((resolve) => { this.next = resolve; });
+	// Setup state switch function
 	let toHandle;
-	this.next.timeout = (msecs, nextState) => {
-		toHandle = setTimeout(() => this.next(nextState), msecs);
-	};
-	this.msg(this.log.debug, `Enter state ${stateName}`, {
-		message_id: '4d1314823a494567ba0c24dd74a8285a',
-		state: stateName
-	});
-	this.states[stateName](this.ctx, i, o, this.next, err, lastState);
-	leave.then((ret) => {
+	this.next = (ret) => {
+		// Make sure we are still in the current state
+		if (stateName !== this.currentState) return;
+
 		// Clean up state related stuffe
 		if (toHandle) clearTimeout(toHandle);
-		iHandler.forEach((h) => this.input.removeListener(h[0], h[1]));
+		iHandler.forEach((h) => h[0].removeListener(h[1], h[2]));
 
 		// If we were in end state, we want to call onEnd handler
 		if (stateName === FINAL) return this.leave(ret);
@@ -74,7 +77,26 @@ FSMInstance.prototype.goto = function (stateName, err, lastState) {
 			nextState = ret;
 		}
 		this.goto(nextState, err, stateName);
+	};
+	this.next.timeout = (msecs, nextState) => {
+		if (stateName !== this.currentState) return;
+		if (toHandle) clearTimeout(toHandle);
+		toHandle = setTimeout(() => this.next(nextState), msecs);
+	};
+
+	// Store current state
+	this.currentState = stateName;
+
+	// Call state
+	this.msg(this.log.debug, `Enter state ${stateName}`, {
+		message_id: '4d1314823a494567ba0c24dd74a8285a',
+		state: stateName
 	});
+	try {
+		this.states[stateName](this.ctx, i, o, this.next, err, lastState);
+	} catch (err) {
+		this.next(err);
+	}
 };
 
 FSMInstance.prototype.leave = function (ret) {
@@ -102,8 +124,10 @@ FSMInstance.prototype.msg = function (handler, msg, info) {
 
 function FSM (opts) {
 	this.firstState = opts.firstState;
-	this.input = opts.input;
-	this.output = opts.output;
+	this.inputs = opts.inputs || {};
+	this.outputs = opts.outputs || {};
+	if (opts.input) this.inputs.main = opts.input;
+	if (opts.output) this.outputs.main = opts.output;
 	this.fsmName = opts.fsmName;
 	this.log = {
 		debug: opts.log && opts.log.debug ? opts.log.debug : undefined,
@@ -116,6 +140,7 @@ function FSM (opts) {
 }
 
 FSM.prototype.state = function (name, handler) {
+	if (this.firstState === undefined) this.firstState = name;
 	this.states[name] = handler;
 	return this;
 };

@@ -12,6 +12,11 @@ test('call first state', (done) => {
 	fsm.run();
 });
 
+test('set firstState implcitly to the first defined state', (done) => {
+	const fsm = FSM({}).state('test', () => done());
+	fsm.run();
+});
+
 test('expose on method of input bus', () => {
 	const EVENT = 'e';
 	const HANDLER = () => {};
@@ -23,8 +28,29 @@ test('expose on method of input bus', () => {
 		i(EVENT, HANDLER);
 	});
 	fsm.run();
-	expect(e.on.mock.calls[0][0]).toEqual(EVENT);
+	expect(e.on.mock.calls[0][0]).toBe(EVENT);
 	expect(e.on.mock.calls[0][1]).toBe(HANDLER);
+});
+
+test('expose on method of input busses', () => {
+	const EVENT_A = 'a';
+	const HANDLER_A = () => {};
+	const EVENT_B = 'b';
+	const HANDLER_B = () => {};
+	const a = EventEmitter();
+	const b = EventEmitter();
+	const fsm = FSM({
+		firstState: 'test',
+		inputs: {a, b}
+	}).state('test', (ctx, i) => {
+		i.a(EVENT_A, HANDLER_A);
+		i.b(EVENT_B, HANDLER_B);
+	});
+	fsm.run();
+	expect(a.on.mock.calls[0][0]).toBe(EVENT_A);
+	expect(a.on.mock.calls[0][1]).toBe(HANDLER_A);
+	expect(b.on.mock.calls[0][0]).toBe(EVENT_B);
+	expect(b.on.mock.calls[0][1]).toBe(HANDLER_B);
 });
 
 test('expose emit method of output bus', () => {
@@ -42,6 +68,27 @@ test('expose emit method of output bus', () => {
 	expect(e.emit.mock.calls[0][1]).toBe(OBJ);
 });
 
+test('expose emit method of output busses', () => {
+	const EVENT_A = 'a';
+	const OBJ_A = {};
+	const EVENT_B = 'b';
+	const OBJ_B = {};
+	const a = EventEmitter();
+	const b = EventEmitter();
+	const fsm = FSM({
+		firstState: 'test',
+		outputs: {a, b}
+	}).state('test', (ctx, i, o) => {
+		o.a(EVENT_A, OBJ_A);
+		o.b(EVENT_B, OBJ_B);
+	});
+	fsm.run();
+	expect(a.emit.mock.calls[0][0]).toEqual(EVENT_A);
+	expect(a.emit.mock.calls[0][1]).toBe(OBJ_A);
+	expect(b.emit.mock.calls[0][0]).toEqual(EVENT_B);
+	expect(b.emit.mock.calls[0][1]).toBe(OBJ_B);
+});
+
 test('warn about not consumed events', () => {
 	const e = EventEmitter();
 	e.emit.mockReturnValueOnce(false);
@@ -55,7 +102,7 @@ test('warn about not consumed events', () => {
 		o('testEvent');
 	});
 	fsm.run();
-	expect(warn.mock.calls[0][0]).toEqual(`testFSM: Event testEvent had no listeners`);
+	expect(warn.mock.calls[0][0]).toEqual(`testFSM: Event testEvent on bus main had no listeners`);
 	expect(warn.mock.calls[0][1]).toMatchObject({
 		message_id: 'c84984c1816e4bf7b552dd7e638e9fa9',
 		fsm_name: 'testFSM',
@@ -70,6 +117,20 @@ test('head over to next state', (done) => {
 		next('test2');
 	}).state('test2', () => {
 		done();
+	});
+	fsm.run();
+});
+
+test('suppress further calls of next callback', (done) => {
+	const fsm = FSM({
+		firstState: 'test1'
+	}).state('test1', (ctx, i, o, next) => {
+		next('test2');
+		next('test3');
+	}).state('test2', () => {
+		done();
+	}).state('test3', () => {
+		done(new Error('wrong state'));
 	});
 	fsm.run();
 });
@@ -103,6 +164,22 @@ test('head over to next state after timeout', (done) => {
 		done();
 	});
 	fsm.run();
+	jest.advanceTimersByTime(10000);
+});
+
+test('retrigger timeout', (done) => {
+	const fsm = FSM({
+		firstState: 'test1'
+	}).state('test1', (ctx, i, o, next) => {
+		next.timeout(10000, 'test2');
+		next.timeout(20000, 'test3');
+	}).state('test2', () => {
+		done(new Error('Wrong state'));
+	}).state('test3', () => {
+		done();
+	});
+	fsm.run();
+	jest.advanceTimersByTime(10000);
 	jest.advanceTimersByTime(10000);
 });
 
@@ -160,6 +237,20 @@ test('run final handler if instance of Error is passed into next', (done) => {
 	fsm.run();
 });
 
+test('run final handler if errors are thrown', (done) => {
+	const fsm = FSM({
+		firstState: 'test'
+	}).state('test', (ctx, i, o, next) => {
+		throw new Error('testErr');
+	}).final((ctx, i, o, end, err) => {
+		try {
+			expect(err.message).toEqual('testErr');
+			done();
+		} catch (e) { done(e); }
+	});
+	fsm.run();
+});
+
 test('return the result of final handler', (done) => {
 	const CTX = {};
 	const RESULT = {};
@@ -172,14 +263,12 @@ test('return the result of final handler', (done) => {
 	});
 	const onEnd = jest.fn();
 	fsm.run(CTX, onEnd);
-	setImmediate(() => {
-		try {
-			expect(onEnd.mock.calls[0][0]).toBe(RESULT);
-			done();
-		} catch (e) {
-			done(e);
-		}
-	});
+	try {
+		expect(onEnd.mock.calls[0][0]).toBe(RESULT);
+		done();
+	} catch (e) {
+		done(e);
+	}
 });
 
 test('call onEnd handler even if no final handler has been defined', (done) => {
@@ -191,14 +280,12 @@ test('call onEnd handler even if no final handler has been defined', (done) => {
 	});
 	const onEnd = jest.fn();
 	fsm.run(CTX, onEnd);
-	setImmediate(() => {
-		try {
-			expect(onEnd.mock.calls[0][0].message).toEqual('errTest');
-			done();
-		} catch (e) {
-			done(e);
-		}
-	});
+	try {
+		expect(onEnd.mock.calls[0][0].message).toEqual('errTest');
+		done();
+	} catch (e) {
+		done(e);
+	}
 });
 
 test('error log Errors from final handler', (done) => {
@@ -213,12 +300,10 @@ test('error log Errors from final handler', (done) => {
 		end(err);
 	});
 	fsm.run();
-	setImmediate(() => {
-		try {
-			expect(error.mock.calls[0][0]).toEqual('testFSM: testErr');
-			done();
-		} catch (e) { done(e); }
-	});
+	try {
+		expect(error.mock.calls[0][0]).toEqual('testFSM: testErr');
+		done();
+	} catch (e) { done(e); }
 });
 
 test('expose next handler', (done) => {
@@ -272,16 +357,14 @@ test('debug log fsm destruction', (done) => {
 		next(null);
 	});
 	fsm.run();
-	setImmediate(() => {
-		try {
-			expect(debug.mock.calls[3][0]).toEqual(`testFSM: Removed instance`);
-			expect(debug.mock.calls[3][1]).toMatchObject({
-				message_id: '7be6d26c828240a0bb82fc84e5d6a662',
-				fsm_name: 'testFSM'
-			});
-			done();
-		} catch (e) { done(e); }
-	});
+	try {
+		expect(debug.mock.calls[3][0]).toEqual(`testFSM: Removed instance`);
+		expect(debug.mock.calls[3][1]).toMatchObject({
+			message_id: '7be6d26c828240a0bb82fc84e5d6a662',
+			fsm_name: 'testFSM'
+		});
+		done();
+	} catch (e) { done(e); }
 });
 
 test('complain about non-existing states', (done) => {

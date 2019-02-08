@@ -82,9 +82,11 @@ const edfsmFactory = EDFSM(opts);
 
 Creates a new FSM factory with given ```opts```:
  * ```fsmName```: Human-readable name describing the FSM. Used for logging.
- * ```input```: Instance of the input event bus.
- * ```output```: Instance of the output event bus. Can be the same instance as ```input```.
- * ```firstState```: The name of the entry state.
+ * ```inputs```: Object containing multiple input busses. Their ```on()``` methods are accessible by calling ```i[key](event, () => {...})``` inside the states.
+ * ```outputs```: Object containing multiple output busses. Events are emitted by calling ```o[key](event, () => {...})``` inside the states.
+ * ```input```: Instance of the main input event bus. Can be used instead of the ```inputs``` option. Event listeners are installed by calling ```i(event, () => {...})``` inside the state.
+ * ```output```: Instance of the output event bus. Can be used instead of the ```outputs``` option. Can be the same instance as ```input```. Events can be emitted by calling ```o(event, arg)``` inside the states.
+ * ```firstState```: The name of the entry state. If not given, the first state will become the entry state.
  * ```log```: Object containing logging callbacks. All callbacks have this interface: ```(msg, obj) => {}```, whereas ```msg``` is the log message and ```obj``` contains further machine-readable details.
    * ```debug```: Message about FMS construction, destruction and state changes
    * ```warn```: Warnings about unconsumed output messages
@@ -98,10 +100,12 @@ edfsmFactory.state(name, (ctx, i, o, next) => {...});
 
  * ```name```: The state's name for addressing it.
  * ```ctx```: Context object of the current instance of the FSM. You can store any kind of information in there.
- * ```i```: Helper method for setting up listeners to input events: ```i(event, (arg) => {...})```. The listener will be removed automatically when the state is left. You do not have to take care about that.
- * ```o```: Helper method for emitting events on the output event bus: ```o(event, arg)```.
+ * ```i```: *This interface is used if the FSM option ```input``` is set.* Helper method for setting up listeners to input events: ```i(event, (arg) => {...})```.  The listener will be removed automatically when the state is left. You do not have to take care about that.
+ * ```i[key]```: *This interface is used if the FSM option ```inputs``` is set.* Helper method for setting up listeners to input events: ```i[key](event, (arg) => {...})```. ```key``` is the respective input item. The listener will be removed automatically when the state is left. You do not have to take care about that.
+ * ```o```: *This interface is used if the FSM option ```output``` is set.* Helper method for emitting events on the output event bus: ```o(event, arg)```.
+ * ```o[key]```: *This interface is used if the FSM option ```outputs``` is set.* Helper method for emitting events on the output event bus: ```o[key](event, arg)```. ```key``` is the respective output item.
  * ```next```: Method to be called if the current state shall be left: ```next(state)```. For transitioning to another state, put the state's name in the argument. If you want to destroy the current FSM instance, state ```null``` or an instance of ```Error``` as the first argument.
- * ```next.timeout```: Like ```next``` but delayed by ```timeout``` milliseconds: ```next.timeout(timeout, state)```. If the current state is left before the timeout elapsed, it will be cleared automatically.
+ * ```next.timeout```: Like ```next``` but delayed by ```timeout``` milliseconds: ```next.timeout(timeout, state)```. If the current state is left before the timeout elapsed, it will be cleared automatically. The timeout can be retriggered by calling this method again.
 
 You can define a special state that will be entered before the FSM instance gets destroyed:
 
