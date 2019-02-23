@@ -23,7 +23,7 @@
   "homepage": "https://github.com/jue89/node-edfsm#readme",
   "devDependencies": {
     "happiness": "^10.0.2",
-    "jest": "^22.1.4"
+    "jest": "^24.1.0"
   },
   "happiness": {
     "globals": [
@@ -36,6 +36,7 @@
   },
   "jest": {
     "automock": false,
-    "clearMocks": true
+    "clearMocks": true,
+    "testEnvironment": "node"
   }
 }
