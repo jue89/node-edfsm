@@ -31,8 +31,9 @@ FSMInstance.prototype.goto = function (stateName, err, lastState) {
 	});
 
 	// Expose output bus
-	const oHandlerGen = (key) => (name, arg) => {
-		const consumed = this.outputs[key].emit(name, arg);
+	const oHandlerGen = (key) => (...args) => {
+		const name = args[0];
+		const consumed = this.outputs[key].emit.apply(this.outputs[key], args);
 		if (!consumed) {
 			this.msg(this.log.warn, `Event ${name} on bus ${key} had no listeners`, {
 				event: name,
