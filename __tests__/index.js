@@ -55,17 +55,19 @@ test('expose on method of input busses', () => {
 
 test('expose emit method of output bus', () => {
 	const EVENT = 'e';
-	const OBJ = {};
+	const ARG1 = 'a1';
+	const ARG2 = 'a2';
 	const e = EventEmitter();
 	const fsm = FSM({
 		firstState: 'test',
 		output: e
 	}).state('test', (ctx, i, o) => {
-		o(EVENT, OBJ);
+		o(EVENT, ARG1, ARG2);
 	});
 	fsm.run();
 	expect(e.emit.mock.calls[0][0]).toEqual(EVENT);
-	expect(e.emit.mock.calls[0][1]).toBe(OBJ);
+	expect(e.emit.mock.calls[0][1]).toBe(ARG1);
+	expect(e.emit.mock.calls[0][2]).toBe(ARG2);
 });
 
 test('expose emit method of output busses', () => {
