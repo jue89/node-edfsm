@@ -55,12 +55,13 @@ FSMInstance.prototype.goto = function (stateName, err, lastState) {
 
 	// Setup state switch function
 	let toHandle;
-	this.next = (ret) => {
+	let next = (ret) => {
+		clearTimeout(toHandle);
+
 		// Make sure we are still in the current state
 		if (stateName !== this.currentState) return;
 
-		// Clean up state related stuffe
-		if (toHandle) clearTimeout(toHandle);
+		// Clean up state related stuff
 		iHandler.forEach((h) => h[0].removeListener(h[1], h[2]));
 
 		// If we were in end state, we want to call onEnd handler
@@ -79,11 +80,12 @@ FSMInstance.prototype.goto = function (stateName, err, lastState) {
 		}
 		this.goto(nextState, err, stateName);
 	};
-	this.next.timeout = (msecs, nextState) => {
+	next.timeout = (msecs, nextState) => {
+		clearTimeout(toHandle);
 		if (stateName !== this.currentState) return;
-		if (toHandle) clearTimeout(toHandle);
-		toHandle = setTimeout(() => this.next(nextState), msecs);
+		toHandle = setTimeout(() => next(nextState), msecs);
 	};
+	this.next = next;
 
 	// Store current state
 	this.currentState = stateName;
